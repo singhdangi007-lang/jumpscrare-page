@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DO NOT OPEN</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #111 0%, #000 70%);
+      color: #ddd;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      user-select: none;
+    }
+
+    .card {
+      max-width: 520px;
+      padding: 28px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      box-shadow: 0 10px 60px rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
+    }
+
+    h1 { letter-spacing: 2px; margin: 0 0 8px; }
+    p { opacity: 0.85; margin: 0 0 18px; }
+
+    button {
+      padding: 14px 18px;
+      font-size: 16px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      background: #b00020;
+      color: white;
+      box-shadow: 0 8px 30px rgba(176,0,32,0.35);
+    }
+    button:active { transform: scale(0.98); }
+
+    /* Flicker text */
+    .flicker {
+      animation: flicker 2.2s infinite;
+    }
+    @keyframes flicker {
+      0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+      20%, 24%, 55% { opacity: 0.35; }
+    }
+
+    /* Jumpscare ghost */
+    #ghostWrap {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.92);
+      z-index: 9999;
+    }
+
+    #ghost {
+      font-size: min(42vw, 360px);
+      filter: drop-shadow(0 0 35px rgba(255,255,255,0.25));
+      transform: scale(0.1);
+      transition: transform 80ms ease;
+      animation: shake 0.08s infinite;
+    }
+
+    @keyframes shake {
+      0% { transform: translate(0,0) scale(var(--s,1)); }
+      25% { transform: translate(6px,-4px) scale(var(--s,1)); }
+      50% { transform: translate(-6px,4px) scale(var(--s,1)); }
+      75% { transform: translate(5px,3px) scale(var(--s,1)); }
+      100% { transform: translate(-5px,-3px) scale(var(--s,1)); }
+    }
+
+    #msg {
+      position: fixed;
+      bottom: 8vh;
+      width: 100%;
+      text-align: center;
+      font-size: clamp(18px, 3vw, 28px);
+      color: #ff4d4d;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(255,0,0,0.4);
+      display: none;
+      z-index: 10000;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 class="flicker">⚠️ DO NOT OPEN ⚠️</h1>
+    <p>Put your volume up… and click if you’re brave.</p>
+    <button id="startBtn">I’m Brave 😈</button>
+    <p style="margin-top:14px;font-size:13px;opacity:.7;">
+      (Tip: Best on mobile in a dark room)
+    </p>
+  </div>
+
+  <div id="ghostWrap">
+    <div id="ghost">👻</div>
+  </div>
+  <div id="msg">RUN. NOW.</div>
+
+  <script>
+    const startBtn = document.getElementById("startBtn");
+    const ghostWrap = document.getElementById("ghostWrap");
+    const msg = document.getElementById("msg");
+    const ghost = document.getElementById("ghost");
+
+    // Simple beep sound (no external file)
+    // Uses WebAudio so it works without mp3 hosting.
+    function screamBeep() {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioContext();
+
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(220, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.06);
+      o.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.20);
+
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.7, ctx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+      o.connect(g);
+      g.connect(ctx.destination);
+
+      o.start();
+      o.stop(ctx.currentTime + 0.27);
+    }
+
+    function goFullScreen() {
+      const el = document.documentElement;
+      if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+    }
+
+    function jumpscare() {
+      goFullScreen(); // might be blocked sometimes; still ok
+      ghostWrap.style.display = "flex";
+      msg.style.display = "block";
+
+      // Big sudden scale
+      ghost.style.setProperty("--s", "1.2");
+      ghost.style.transform = "scale(1.2)";
+
+      // Play sound (allowed because user clicked)
+      screamBeep();
+
+      // After 1.8s, fade out
+      setTimeout(() => {
+        ghostWrap.style.display = "none";
+        msg.style.display = "none";
+        ghost.style.transform = "scale(0.1)";
+      }, 1800);
+    }
+
+    startBtn.addEventListener("click", () => {
+      // Creepy delay then jumpscare
+      startBtn.disabled = true;
+      startBtn.textContent = "Listening…";
+
+      setTimeout(() => {
+        jumpscare();
+        startBtn.disabled = false;
+        startBtn.textContent = "Again 😈";
+      }, 1200);
+    });
+
+    // Optional: click background to close if stuck
+    ghostWrap.addEventListener("click", () => {
+      ghostWrap.style.display = "none";
+      msg.style.display = "none";
+      ghost.style.transform = "scale(0.1)";
+    });
+  </script>
+</body>
+</html>
